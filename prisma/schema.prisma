@@ -1,0 +1,184 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+enum OrderStatus {
+  CREATED
+  PENDING_PAYMENT
+  PAID
+  PENDING_EFT
+  EFT_REVIEW
+  CANCELLED
+  REFUNDED
+}
+
+enum TicketStatus {
+  UNUSED
+  USED
+  REFUNDED
+  VOID
+}
+
+enum PaymentMethod {
+  CARD
+  INSTANT_EFT
+  MANUAL_EFT
+}
+
+enum PaymentStatus {
+  INITIATED
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum ScanResult {
+  VALID
+  INVALID
+}
+
+enum TicketTypeCode {
+  ADULT
+  KID
+  PENSIONER
+  UNDER3
+}
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model TicketType {
+  id        String         @id @default(cuid())
+  code      TicketTypeCode @unique
+  name      String
+  basePrice Int            // cents
+  isActive  Boolean        @default(true)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  tickets Ticket[]
+}
+
+model Order {
+  id                String      @id @default(cuid())
+  customerEmail     String
+  visitDate         DateTime    // store as date-only (00:00Z), we enforce date logic in code
+  status            OrderStatus @default(CREATED)
+  currency          String      @default("ZAR")
+  subtotalCents     Int         @default(0)
+  addOnsCents       Int         @default(0)
+  totalCents        Int         @default(0)
+  /// HMAC-bound nonce for the single order QR (one QR per order)
+  orderQrNonce    String?
+  orderQrIssuedAt DateTime?
+  pdfUrl            String?
+  pdfStorageKey     String?
+  manualEftPopUrl   String?
+  manualEftPopKey   String?
+  notes             String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  payments Payment[]
+  tickets  Ticket[]
+  scanLogs ScanLog[]
+
+  @@index([visitDate])
+  @@index([customerEmail])
+}
+
+model Ticket {
+  id               String       @id @default(cuid())
+  orderId          String
+  order            Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  ticketTypeId     String
+  ticketType       TicketType   @relation(fields: [ticketTypeId], references: [id])
+
+  visitDate        DateTime
+  hasSwimmingPass  Boolean      @default(false)
+
+  priceBaseCents   Int
+  priceAddOnCents  Int
+  totalPriceCents  Int
+
+  status           TicketStatus @default(UNUSED)
+
+  qrNonce          String       // random nonce (base64url)
+  qrIssuedAt       DateTime?
+  usedAt           DateTime?
+  usedByScannerId  String?
+
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  scanLogs ScanLog[]
+
+  @@index([visitDate])
+  @@index([orderId])
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  orderId         String
+  order           Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  method          PaymentMethod
+  status          PaymentStatus @default(INITIATED)
+  amountCents     Int
+  provider        String?       // e.g., "payfast" / "ozow" / "mock"
+  providerRef     String?       // transaction/payment reference
+  rawWebhookJson  Json?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([orderId])
+  @@index([providerRef])
+}
+
+model DailyBandColour {
+  id              String         @id @default(cuid())
+  date            DateTime       // date-only
+  ticketTypeCode  TicketTypeCode
+  hasSwimmingPass Boolean
+  colour          String
+
+  createdAt       DateTime       @default(now())
+
+  @@unique([date, ticketTypeCode, hasSwimmingPass])
+  @@index([date])
+}
+
+model ScanLog {
+  id         String     @id @default(cuid())
+  timestamp  DateTime   @default(now())
+
+  ticketId   String?
+  ticket     Ticket?    @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+
+  orderId    String?
+  order      Order?     @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  scannerId  String
+  result     ScanResult
+  reason     String?
+
+  createdAt  DateTime   @default(now())
+
+  @@index([timestamp])
+  @@index([ticketId])
+  @@index([orderId])
+}

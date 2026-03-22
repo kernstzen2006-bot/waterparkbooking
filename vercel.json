@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/daliy-band-colours",
+      "schedule": "0 3 * * *"
+    }
+  ]
+}
