@@ -33,18 +33,19 @@ export function CheckoutClient(props: {
   }, [props.types, props.initialQtyByCode]);
 
   const [drafts, setDrafts] = useState(attendees);
+  const typeMap = useMemo(() => new Map(props.types.map((ticketType) => [ticketType.code, ticketType])), [props.types]);
 
   const price = useMemo(() => {
-    const typeMap = new Map(props.types.map((t) => [t.code, t]));
     let subtotal = 0;
     let addOns = 0;
-    for (const a of drafts) {
-      const t = typeMap.get(a.ticketTypeCode)!;
-      subtotal += t.basePriceCents;
-      if (a.hasSwimmingPass) addOns += SWIM_ADDON_CENTS;
+    for (const attendee of drafts) {
+      const ticketType = typeMap.get(attendee.ticketTypeCode);
+      if (!ticketType) continue;
+      subtotal += ticketType.basePriceCents;
+      if (attendee.hasSwimmingPass) addOns += SWIM_ADDON_CENTS;
     }
     return { subtotal, addOns, total: subtotal + addOns };
-  }, [drafts, props.types]);
+  }, [drafts, typeMap]);
 
   async function createOrder() {
     if (!email.includes("@")) {
@@ -127,13 +128,13 @@ export function CheckoutClient(props: {
             {drafts.map((a, idx) => (
               <div key={idx} className="flex items-center justify-between rounded border p-2 text-sm">
                 <div>
-                  <div className="font-medium">{a.ticketTypeCode}</div>
+                  <div className="font-medium">{typeMap.get(a.ticketTypeCode)?.name ?? a.ticketTypeCode}</div>
                   <div className="text-gray-600">
                     Swim: <span className="font-semibold">{a.hasSwimmingPass ? "YES" : "NO"}</span>
                   </div>
                 </div>
                 <label className="flex items-center gap-2">
-                  <span className="text-xs text-gray-600">Swimming +R100</span>
+                  <span className="text-xs text-gray-600">Water activities +{formatZar(SWIM_ADDON_CENTS)}</span>
                   <input
                     type="checkbox"
                     checked={a.hasSwimmingPass}
@@ -168,7 +169,7 @@ export function CheckoutClient(props: {
           <ul className="mt-2 list-disc pl-5">
             <li>Tickets are valid only for the selected date.</li>
             <li>One QR code per order; staff scan once, review the whole order, and admit the full group at the gate.</li>
-            <li>Under-3 tickets are free but must be included for headcount.</li>
+            <li>Children aged 2 and under are free but must still be included for headcount.</li>
           </ul>
         </div>
       </div>

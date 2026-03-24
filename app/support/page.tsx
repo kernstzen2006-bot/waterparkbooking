@@ -8,8 +8,8 @@ export default function SupportPage() {
       <div className="grid gap-4 lg:grid-cols-[1.1fr,1.4fr]">
         <div className="space-y-4">
           <div className="rounded border bg-white p-4 text-sm text-gray-700 space-y-2">
-            <p className="font-semibold">Bookings are online only.</p>
-            <p>Book for a specific date. There are no time slots.</p>
+            <p className="font-semibold">Day visitor bookings are online.</p>
+            <p>Book for a specific date. There are no time slots for day visitors.</p>
             <p>Tickets are sent as a PDF after payment is confirmed.</p>
             <p>If you need help, keep your Order ID ready when contacting support.</p>
           </div>
@@ -19,8 +19,9 @@ export default function SupportPage() {
             <ul className="mt-2 list-disc pl-5 space-y-1">
               <li>Manual EFT customers must upload POP on the success page.</li>
               <li>Tickets are only issued after payment is confirmed.</li>
-              <li>Under-3 visitors are free but must still be included for headcount.</li>
+              <li>2 years and under are free for day visitors but must still be included for headcount.</li>
               <li>One QR code covers the full order at the gate.</li>
+              <li>School outing and birthday party package pricing is listed on the booking page.</li>
             </ul>
           </div>
 

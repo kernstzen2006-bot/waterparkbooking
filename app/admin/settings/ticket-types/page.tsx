@@ -21,7 +21,7 @@ export default async function TicketTypesSettings() {
         }))}
       />
       <div className="text-xs text-gray-600">
-        Production note: You required ticket products "exactly". Keep codes stable (ADULT/KID/PENSIONER/UNDER3).
+        Production note: Keep codes stable (ADULT/KID/PENSIONER/UNDER3). Public day visitor pricing is currently fixed in the booking package configuration, so reseed or align these rows if you want the admin data to match the live booking page exactly.
       </div>
     </div>
   );

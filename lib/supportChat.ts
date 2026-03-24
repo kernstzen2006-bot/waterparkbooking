@@ -1,6 +1,13 @@
 import { env } from "@/lib/env";
 import { formatZar } from "@/lib/money";
-import { SWIM_ADDON_CENTS } from "@/lib/pricing";
+import {
+  BIRTHDAY_PARTY_EXTRAS,
+  BIRTHDAY_PARTY_OPTIONS,
+  SCHOOL_OUTING_OPTIONS,
+  SCHOOL_OUTING_SWIM_ADDON_CENTS,
+  SWIM_ADDON_CENTS,
+  getConfiguredDayVisitorTypes,
+} from "@/lib/pricing";
 import { getActiveTicketTypes } from "@/lib/ticketTypes";
 
 export type SupportChatRole = "user" | "model";
@@ -11,11 +18,26 @@ export type SupportChatMessage = {
 };
 
 export async function buildSupportChatInstruction(): Promise<string> {
-  const ticketTypes = await getActiveTicketTypes();
+  const ticketTypes = getConfiguredDayVisitorTypes(await getActiveTicketTypes());
   const ticketLines =
     ticketTypes.length > 0
-      ? ticketTypes.map((ticketType) => `- ${ticketType.name} (${ticketType.code}): ${formatZar(ticketType.basePrice)}`).join("\n")
+      ? ticketTypes
+          .map((ticketType) => `- ${ticketType.name} (${ticketType.code}): ${formatZar(ticketType.basePrice)}`)
+          .join("\n")
       : "- Ticket prices are currently unavailable from the database.";
+
+  const schoolOutingLines = SCHOOL_OUTING_OPTIONS.map(
+    (option) => `- ${option.label} (${option.hours}): ${formatZar(option.priceCents)} per person`
+  ).join("\n");
+
+  const birthdayLines = BIRTHDAY_PARTY_OPTIONS.map(
+    (option) =>
+      `- ${option.label}: ${formatZar(option.priceCents)} per child, minimum ${option.minimumChildren} children (${option.description})`
+  ).join("\n");
+
+  const birthdayExtraLines = BIRTHDAY_PARTY_EXTRAS.map(
+    (extra) => `- ${extra.label}: ${formatZar(extra.priceCents)}`
+  ).join("\n");
 
   const extraContext = env.SUPPORT_CHAT_CONTEXT.trim();
   const extraLines = extraContext ? `\nExtra waterpark details from the owner:\n${extraContext}\n` : "";
@@ -31,6 +53,8 @@ Your job is to help customers with questions about:
 - proof of payment uploads
 - ticket delivery
 - QR code entry
+- school outings
+- birthday parties
 - resend and support guidance
 
 Rules:
@@ -43,12 +67,12 @@ Rules:
 - Do not mention internal implementation details, databases, webhooks, or admin screens unless they help explain a customer-facing booking step.
 
 Facts:
-- Bookings are online only.
+- Day visitors can book online on the website.
 - Customers book for a specific date. There are no time slots.
 - Tickets are valid only for the selected date.
 - One QR code is issued per order.
 - At the gate, staff scan the order QR once, review the whole order, and admit the full group.
-- Under-3 tickets are free, but they must still be included for headcount.
+- 2 years and under are free for day visitor entry, but they must still be included for headcount.
 - The website stores only the customer email for ticket delivery and resend.
 - Payment methods offered on the website: Card, Instant EFT, and Manual EFT.
 - Card payments stay pending until payment confirmation is received.
@@ -58,8 +82,15 @@ Facts:
 - After payment is confirmed, tickets are issued as a PDF and emailed.
 - If email is delayed, customers can still use the success page to download the PDF when available.
 - Support email: ${env.SUPPORT_EMAIL}
-- Swimming pass add-on: ${formatZar(SWIM_ADDON_CENTS)} per person.
-- Current active ticket products:
-${ticketLines}${extraLines}
+- Day visitor water activities add-on: ${formatZar(SWIM_ADDON_CENTS)} per person.
+- Current day visitor prices:
+${ticketLines}
+- School outing packages:
+${schoolOutingLines}
+- School outing swimming add-on: ${formatZar(SCHOOL_OUTING_SWIM_ADDON_CENTS)} per person.
+- Birthday party packages:
+${birthdayLines}
+- Birthday party extras:
+${birthdayExtraLines}${extraLines}
 `.trim();
 }

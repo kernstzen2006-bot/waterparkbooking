@@ -24,30 +24,33 @@ async function main() {
   });
 
   const ticketTypes: Array<{ code: TicketTypeCode; name: string; basePrice: number }> = [
-    { code: TicketTypeCode.ADULT, name: "Adult Day Pass", basePrice: 15000 },
-    { code: TicketTypeCode.KID, name: "Kid Day Pass", basePrice: 10000 },
-    { code: TicketTypeCode.PENSIONER, name: "Pensioner Day Pass", basePrice: 10000 },
-    { code: TicketTypeCode.UNDER3, name: "Under 3 years old", basePrice: 0 },
+    { code: TicketTypeCode.ADULT, name: "Adult Day Visitor", basePrice: 10500 },
+    { code: TicketTypeCode.KID, name: "Child Day Visitor (3-17 years)", basePrice: 9000 },
+    { code: TicketTypeCode.PENSIONER, name: "Pensioner Day Visitor", basePrice: 9000 },
+    { code: TicketTypeCode.UNDER3, name: "2 Years And Under", basePrice: 0 },
   ];
 
-  for (const tt of ticketTypes) {
+  for (const ticketType of ticketTypes) {
     await prisma.ticketType.upsert({
-      where: { code: tt.code },
-      update: { name: tt.name, basePrice: tt.basePrice, isActive: true },
-      create: { code: tt.code, name: tt.name, basePrice: tt.basePrice, isActive: true },
+      where: { code: ticketType.code },
+      update: { name: ticketType.name, basePrice: ticketType.basePrice, isActive: true },
+      create: {
+        code: ticketType.code,
+        name: ticketType.name,
+        basePrice: ticketType.basePrice,
+        isActive: true,
+      },
     });
   }
 
-  console.log("✅ Seed complete: AdminUser + TicketType created/updated.");
+  console.log("Seed complete: AdminUser + TicketType created/updated.");
 }
 
 main()
-  .catch((e) => {
-    console.error("❌ Seed failed:", e);
+  .catch((error) => {
+    console.error("Seed failed:", error);
     process.exit(1);
   })
   .finally(async () => {
     await prisma.$disconnect();
   });
-
-

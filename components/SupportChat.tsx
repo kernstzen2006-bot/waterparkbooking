@@ -11,7 +11,7 @@ const STARTER_QUESTIONS = [
   "What are your ticket prices?",
   "How does manual EFT work?",
   "When do I receive my tickets?",
-  "Do under-3 children need a ticket?",
+  "Do children aged 2 and under need a ticket?",
 ];
 
 export function SupportChat(props: {

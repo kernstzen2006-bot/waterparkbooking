@@ -1,5 +1,6 @@
 import { parseDateOnlyFromYYYYMMDD, toYYYYMMDD } from "@/lib/dates";
 import { getActiveTicketTypes } from "@/lib/ticketTypes";
+import { getConfiguredDayVisitorTypes } from "@/lib/pricing";
 import { CheckoutClient } from "./ui";
 
 export const dynamic = "force-dynamic";
@@ -8,7 +9,7 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Rec
   const dateStr = typeof searchParams.date === "string" ? searchParams.date : "";
   const visitDate = parseDateOnlyFromYYYYMMDD(dateStr);
 
-  const types = await getActiveTicketTypes();
+  const types = getConfiguredDayVisitorTypes(await getActiveTicketTypes());
 
   const qtyByCode: Record<string, number> = {};
   for (const t of types) {

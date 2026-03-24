@@ -1,4 +1,12 @@
 import Link from "next/link";
+import {
+  BIRTHDAY_PARTY_EXTRAS,
+  BIRTHDAY_PARTY_OPTIONS,
+  SCHOOL_OUTING_OPTIONS,
+  SCHOOL_OUTING_SWIM_ADDON_CENTS,
+  SWIM_ADDON_CENTS,
+} from "@/lib/pricing";
+import { formatZar } from "@/lib/money";
 
 export default function HomePage() {
   return (
@@ -15,15 +23,46 @@ export default function HomePage() {
           Support
         </Link>
       </div>
+
       <div className="rounded border bg-white p-4 text-sm text-gray-700">
-        <p className="font-semibold">Ticket products</p>
+        <p className="font-semibold">Day visitor pricing</p>
         <ul className="list-disc pl-5">
-          <li>Adult Day Pass = R150</li>
-          <li>Kid Day Pass = R100</li>
-          <li>Pensioner Day Pass = R100</li>
-          <li>Under 3 years old = FREE (R0, still gets QR/PDF)</li>
-          <li>Swimming Pass add-on = +R100 per person (optional for all)</li>
+          <li>2 years and under = FREE</li>
+          <li>3-17 years = R90</li>
+          <li>Adults = R105</li>
+          <li>Pensioners = R90</li>
+          <li>Water activities add-on = +{formatZar(SWIM_ADDON_CENTS)} per person</li>
         </ul>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="rounded border bg-white p-4 text-sm text-gray-700">
+          <p className="font-semibold">School outings</p>
+          <ul className="mt-2 list-disc pl-5">
+            {SCHOOL_OUTING_OPTIONS.map((option) => (
+              <li key={option.code}>
+                {option.label} ({option.hours}) = {formatZar(option.priceCents)}/person
+              </li>
+            ))}
+            <li>Swimming add-on = +{formatZar(SCHOOL_OUTING_SWIM_ADDON_CENTS)}/person</li>
+          </ul>
+        </div>
+
+        <div className="rounded border bg-white p-4 text-sm text-gray-700">
+          <p className="font-semibold">Birthday parties</p>
+          <ul className="mt-2 list-disc pl-5">
+            {BIRTHDAY_PARTY_OPTIONS.map((option) => (
+              <li key={option.code}>
+                {option.label} = {formatZar(option.priceCents)}/child, minimum {option.minimumChildren} children
+              </li>
+            ))}
+            {BIRTHDAY_PARTY_EXTRAS.map((extra) => (
+              <li key={extra.code}>
+                {extra.label} = {formatZar(extra.priceCents)}
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </div>
   );

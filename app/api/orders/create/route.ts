@@ -6,7 +6,7 @@ import { parseDateOnlyFromYYYYMMDD, toYYYYMMDD } from "@/lib/dates";
 import { issueAndSendTicketsForOrder } from "@/lib/orderFulfillment";
 import { sendPendingOrderEmail } from "@/lib/orderNotifications";
 import { getActiveTicketTypes } from "@/lib/ticketTypes";
-import { SWIM_ADDON_CENTS } from "@/lib/pricing";
+import { SWIM_ADDON_CENTS, getConfiguredDayVisitorTypes } from "@/lib/pricing";
 import { PaymentMethod, PaymentStatus, OrderStatus, TicketTypeCode } from "@prisma/client";
 
 export const runtime = "nodejs";
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     const { customerEmail, visitDate, paymentMethod, attendees } = parsed.data;
     const vd = parseDateOnlyFromYYYYMMDD(visitDate);
 
-    const types = await getActiveTicketTypes();
+    const types = getConfiguredDayVisitorTypes(await getActiveTicketTypes());
     const typeByCode = new Map(types.map((t) => [t.code, t]));
 
     let subtotal = 0;
