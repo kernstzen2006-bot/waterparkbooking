@@ -13,7 +13,7 @@ type PreviewGroup = {
   remaining: number;
 };
 
-type PreviewUnused = {
+type PreviewAvailable = {
   id: string;
   ticketTypeCode: string;
   ticketTypeName: string;
@@ -25,32 +25,35 @@ type PreviewOk = {
   ok: true;
   order: { id: string; customerEmail: string; visitDate: string };
   groups: PreviewGroup[];
-  unusedTickets: PreviewUnused[];
+  availableTickets: PreviewAvailable[];
 };
 
 type PreviewErr = { ok: false; reason: string };
 
 type AdmitOk = {
   ok: true;
-  ticket: {
+  order: {
     id: string;
-    orderId: string;
-    ticketType: string;
+    visitDate: string;
+    admittedCount: number;
+  };
+  admittedTickets: Array<{
+    id: string;
+    ticketTypeCode: string;
+    ticketTypeName: string;
     hasSwimmingPass: boolean;
     visitDate: string;
-  };
-  wristband: { label: string; colour: string | null };
+  }>;
+  wristbandGroups: Array<{
+    ticketTypeCode: string;
+    ticketTypeName: string;
+    hasSwimmingPass: boolean;
+    count: number;
+    wristband: { label: string; colour: string | null };
+  }>;
 };
 
-type AdmitErr = { ok: false; reason: string; details?: { usedAt?: string; usedBy?: string } };
-
-function todayISODateLocal(): string {
-  const d = new Date();
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
-}
+type AdmitErr = { ok: false; reason: string };
 
 export default function ScanPage() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -67,7 +70,6 @@ export default function ScanPage() {
   const [lastToken, setLastToken] = useState<string | null>(null);
   const [preview, setPreview] = useState<PreviewOk | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
-  const [selectedTicketId, setSelectedTicketId] = useState<string>("");
   const [admitResult, setAdmitResult] = useState<AdmitOk | AdmitErr | null>(null);
 
   const reader = useMemo(() => new BrowserQRCodeReader(), []);
@@ -85,7 +87,7 @@ export default function ScanPage() {
     let stopped = false;
 
     async function start() {
-      setMessage("Starting camera…");
+      setMessage("Starting camera...");
 
       const video = videoRef.current;
       if (!video) return;
@@ -124,7 +126,7 @@ export default function ScanPage() {
             armedRef.current = false;
             lastTokenRef.current = tokenText;
 
-            setMessage("Loading order…");
+            setMessage("Loading order...");
 
             try {
               const res = await fetch("/api/scan/preview", {
@@ -133,7 +135,6 @@ export default function ScanPage() {
                 body: JSON.stringify({
                   token: tokenText,
                   scannerId: scannerIdRef.current,
-                  clientDate: todayISODateLocal(),
                 }),
               });
 
@@ -143,20 +144,23 @@ export default function ScanPage() {
               if (data.ok) {
                 setPreview(data);
                 setPreviewError(null);
-                setSelectedTicketId(data.unusedTickets[0]?.id ?? "");
+                setAdmitResult(null);
                 setPhase("review");
-                setMessage("Review admission");
+                setMessage("Review order");
               } else {
                 setPreview(null);
                 setPreviewError(data.reason);
+                setAdmitResult(null);
                 setPhase("result");
-                setMessage("INVALID ❌");
+                setMessage("Invalid QR");
               }
             } catch (e: unknown) {
               const msg = e instanceof Error ? e.message : "Unknown error";
+              setPreview(null);
               setPreviewError(msg);
+              setAdmitResult(null);
               setPhase("result");
-              setMessage("ERROR");
+              setMessage("Error");
             } finally {
               processingRef.current = false;
             }
@@ -172,7 +176,7 @@ export default function ScanPage() {
 
     start();
 
-    const rearmTimer = setInterval(() => {
+    const rearmTimer = window.setInterval(() => {
       if (stopped) return;
       if (armedRef.current) return;
       if (phaseRef.current !== "scan") return;
@@ -185,7 +189,7 @@ export default function ScanPage() {
 
     return () => {
       stopped = true;
-      clearInterval(rearmTimer);
+      window.clearInterval(rearmTimer);
 
       try {
         const r = reader as unknown as { stopContinuousDecode?: () => void; reset?: () => void };
@@ -198,7 +202,7 @@ export default function ScanPage() {
       const video = videoRef.current;
       const stream = (video?.srcObject as MediaStream | null) ?? streamRef.current;
 
-      if (stream) stream.getTracks().forEach((t) => t.stop());
+      if (stream) stream.getTracks().forEach((track) => track.stop());
       if (video) video.srcObject = null;
     };
   }, [reader]);
@@ -217,7 +221,7 @@ export default function ScanPage() {
 
     try {
       await track.applyConstraints({ advanced: [{ torch: !torchOn } as MediaTrackConstraintSet] } as MediaTrackConstraints);
-      setTorchOn((v) => !v);
+      setTorchOn((value) => !value);
     } catch {
       alert("Could not toggle torch.");
     }
@@ -228,7 +232,6 @@ export default function ScanPage() {
     setPreviewError(null);
     setAdmitResult(null);
     setLastToken(null);
-    setSelectedTicketId("");
     setPhase("scan");
     setMessage("Ready to scan");
     armedRef.current = true;
@@ -236,62 +239,39 @@ export default function ScanPage() {
   }
 
   function denyAdmission() {
-    resetScan();
+    setPreview(null);
+    setPreviewError(null);
+    setAdmitResult({
+      ok: false,
+      reason: "Order denied by staff. No tickets were used.",
+    });
+    setPhase("result");
+    setMessage("Order denied");
   }
 
   async function acceptAdmission() {
-    if (!lastToken || !selectedTicketId) return;
-    setMessage("Confirming…");
+    if (!lastToken) return;
+    setMessage("Confirming order...");
     try {
       const res = await fetch("/api/scan/admit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           token: lastToken,
-          ticketId: selectedTicketId,
           scannerId: scannerIdRef.current,
         }),
       });
       const data: AdmitOk | AdmitErr = await res.json();
       setAdmitResult(data);
       setPhase("result");
-      setMessage(data.ok ? "ADMITTED ✓" : "INVALID ❌");
+      setMessage(data.ok ? "Order admitted" : "Order denied");
       setPreview(null);
+      setPreviewError(null);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Unknown error";
       setAdmitResult({ ok: false, reason: msg });
       setPhase("result");
-      setMessage("ERROR");
-    }
-  }
-
-  async function refreshPreviewSameOrder() {
-    if (!lastToken) return;
-    setMessage("Refreshing order…");
-    try {
-      const res = await fetch("/api/scan/preview", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: lastToken, scannerId: scannerIdRef.current }),
-      });
-      const data: PreviewOk | PreviewErr = await res.json();
-      if (data.ok) {
-        setPreview(data);
-        setPreviewError(null);
-        setSelectedTicketId(data.unusedTickets[0]?.id ?? "");
-        setAdmitResult(null);
-        setPhase("review");
-        setMessage("Review admission");
-      } else {
-        setPreviewError(data.reason);
-        setPhase("result");
-        setMessage("INVALID ❌");
-      }
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Unknown error";
-      setPreviewError(msg);
-      setPhase("result");
-      setMessage("ERROR");
+      setMessage("Error");
     }
   }
 
@@ -342,9 +322,10 @@ export default function ScanPage() {
             <div className="text-sm opacity-90">ID: {preview.order.id}</div>
             <div className="text-sm opacity-90">Email: {preview.order.customerEmail}</div>
             <div className="text-sm opacity-90">Visit date: {preview.order.visitDate}</div>
+            <div className="text-sm opacity-90">Available tickets: {preview.availableTickets.length}</div>
 
             <div className="mt-3 space-y-2">
-              <div className="font-semibold">Allowed (by type)</div>
+              <div className="font-semibold">Order summary</div>
               <div className="overflow-hidden rounded border border-white/10">
                 <table className="w-full text-left text-sm">
                   <thead className="bg-white/10">
@@ -357,13 +338,13 @@ export default function ScanPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {preview.groups.map((g) => (
-                      <tr key={`${g.ticketTypeCode}-${g.hasSwimmingPass}`} className="border-t border-white/10">
-                        <td className="p-2">{g.ticketTypeName}</td>
-                        <td className="p-2">{g.hasSwimmingPass ? "Yes" : "No"}</td>
-                        <td className="p-2 text-right">{g.total}</td>
-                        <td className="p-2 text-right">{g.used}</td>
-                        <td className="p-2 text-right font-semibold">{g.remaining}</td>
+                    {preview.groups.map((group) => (
+                      <tr key={`${group.ticketTypeCode}-${group.hasSwimmingPass}`} className="border-t border-white/10">
+                        <td className="p-2">{group.ticketTypeName}</td>
+                        <td className="p-2">{group.hasSwimmingPass ? "Yes" : "No"}</td>
+                        <td className="p-2 text-right">{group.total}</td>
+                        <td className="p-2 text-right">{group.used}</td>
+                        <td className="p-2 text-right font-semibold">{group.remaining}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -372,23 +353,34 @@ export default function ScanPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="block text-sm font-semibold">Admit this guest (ticket)</label>
-              <select
-                value={selectedTicketId}
-                onChange={(e) => setSelectedTicketId(e.target.value)}
-                className="w-full rounded bg-white/10 px-3 py-2 text-sm outline-none"
-              >
-                {preview.unusedTickets.length === 0 ? (
-                  <option value="">No unused tickets left</option>
-                ) : (
-                  preview.unusedTickets.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.ticketTypeName}
-                      {t.hasSwimmingPass ? " · Swim" : ""} · R{(t.totalPriceCents / 100).toFixed(0)}
-                    </option>
-                  ))
-                )}
-              </select>
+              <div className="font-semibold">Available tickets on this order</div>
+              <div className="overflow-hidden rounded border border-white/10">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-white/10">
+                    <tr>
+                      <th className="p-2">Ticket</th>
+                      <th className="p-2">Type</th>
+                      <th className="p-2">Swim</th>
+                      <th className="p-2 text-right">Price</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {preview.availableTickets.map((ticket) => (
+                      <tr key={ticket.id} className="border-t border-white/10">
+                        <td className="p-2 font-mono text-xs">{ticket.id}</td>
+                        <td className="p-2">{ticket.ticketTypeName}</td>
+                        <td className="p-2">{ticket.hasSwimmingPass ? "Yes" : "No"}</td>
+                        <td className="p-2 text-right">R{(ticket.totalPriceCents / 100).toFixed(0)}</td>
+                      </tr>
+                    ))}
+                    {preview.availableTickets.length === 0 ? (
+                      <tr>
+                        <td className="p-3 text-gray-300" colSpan={4}>No available tickets left on this order.</td>
+                      </tr>
+                    ) : null}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             <div className="flex gap-2 pt-2">
@@ -397,54 +389,103 @@ export default function ScanPage() {
                 onClick={denyAdmission}
                 className="flex-1 rounded-lg bg-white/10 px-4 py-3 text-sm font-semibold"
               >
-                Deny
+                Deny order
               </button>
               <button
                 type="button"
                 onClick={acceptAdmission}
-                disabled={!selectedTicketId || preview.unusedTickets.length === 0}
+                disabled={preview.availableTickets.length === 0}
                 className="flex-1 rounded-lg bg-green-600 px-4 py-3 text-sm font-semibold disabled:opacity-40"
               >
-                Accept
+                Accept order
               </button>
             </div>
             <p className="text-xs opacity-60">
-              Choose the ticket that matches this guest, then Accept to hand out the wristband colour shown next.
+              Accept admits every available ticket on this order in one step.
             </p>
           </div>
         )}
 
         {phase === "result" && admitResult?.ok && (
           <div className="mt-4 space-y-3 rounded-xl bg-green-900/40 p-4">
-            <div className="text-lg font-bold">Admitted</div>
-            <div className="mt-1 text-sm opacity-90">Type: {admitResult.ticket.ticketType}</div>
-            <div className="text-sm opacity-90">Swimming: {admitResult.ticket.hasSwimmingPass ? "YES" : "NO"}</div>
-            <div className="mt-2 text-sm opacity-90">
-              Wristband:{" "}
-              {admitResult.wristband.colour ? (
-                <span className="font-bold">{admitResult.wristband.colour.toUpperCase()}</span>
-              ) : (
-                <span className="font-bold">NO WRISTBAND</span>
-              )}
+            <div className="text-lg font-bold">Order admitted</div>
+            <div className="text-sm opacity-90">Order ID: {admitResult.order.id}</div>
+            <div className="text-sm opacity-90">Visit date: {admitResult.order.visitDate}</div>
+            <div className="text-sm opacity-90">Tickets admitted: {admitResult.order.admittedCount}</div>
+
+            <div className="space-y-2">
+              <div className="font-semibold">Wristbands to issue</div>
+              <div className="overflow-hidden rounded border border-white/10">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-white/10">
+                    <tr>
+                      <th className="p-2">Type</th>
+                      <th className="p-2">Swim</th>
+                      <th className="p-2 text-right">Count</th>
+                      <th className="p-2">Wristband</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {admitResult.wristbandGroups.map((group) => (
+                      <tr key={`${group.ticketTypeCode}-${group.hasSwimmingPass}`} className="border-t border-white/10">
+                        <td className="p-2">{group.ticketTypeName}</td>
+                        <td className="p-2">{group.hasSwimmingPass ? "Yes" : "No"}</td>
+                        <td className="p-2 text-right">{group.count}</td>
+                        <td className="p-2 font-semibold">
+                          {group.wristband.colour ? group.wristband.colour.toUpperCase() : "NO WRISTBAND"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <div className="mt-2 text-xs opacity-70">Ticket ID: {admitResult.ticket.id}</div>
+
+            <div className="space-y-2">
+              <div className="font-semibold">Admitted tickets</div>
+              <div className="overflow-hidden rounded border border-white/10">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-white/10">
+                    <tr>
+                      <th className="p-2">Ticket</th>
+                      <th className="p-2">Type</th>
+                      <th className="p-2">Swim</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {admitResult.admittedTickets.map((ticket) => (
+                      <tr key={ticket.id} className="border-t border-white/10">
+                        <td className="p-2 font-mono text-xs">{ticket.id}</td>
+                        <td className="p-2">{ticket.ticketTypeName}</td>
+                        <td className="p-2">{ticket.hasSwimmingPass ? "Yes" : "No"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
             <button
               type="button"
-              onClick={refreshPreviewSameOrder}
+              onClick={resetScan}
               className="w-full rounded-lg bg-white/15 px-4 py-3 text-sm font-semibold"
             >
-              Next guest (same order)
+              Scan next order
             </button>
           </div>
         )}
 
         {phase === "result" && admitResult && !admitResult.ok && (
           <div className="mt-4 rounded-xl bg-red-900/40 p-4">
-            <div className="text-lg font-bold">Not admitted</div>
+            <div className="text-lg font-bold">Order not admitted</div>
             <div className="mt-1 text-sm opacity-90">{admitResult.reason}</div>
-            {admitResult.details?.usedAt && (
-              <div className="text-sm opacity-80">Used at: {admitResult.details.usedAt}</div>
-            )}
+            <button
+              type="button"
+              onClick={resetScan}
+              className="mt-4 w-full rounded-lg bg-white/15 px-4 py-3 text-sm font-semibold"
+            >
+              Scan next order
+            </button>
           </div>
         )}
 
@@ -452,6 +493,13 @@ export default function ScanPage() {
           <div className="mt-4 rounded-xl bg-red-900/40 p-4">
             <div className="text-lg font-bold">Invalid QR</div>
             <div className="mt-1 text-sm opacity-90">{previewError}</div>
+            <button
+              type="button"
+              onClick={resetScan}
+              className="mt-4 w-full rounded-lg bg-white/15 px-4 py-3 text-sm font-semibold"
+            >
+              Scan next order
+            </button>
           </div>
         )}
 

@@ -25,6 +25,6 @@ export async function POST(req: Request) {
       visitDate: preview.visitDate,
     },
     groups: preview.groups,
-    unusedTickets: preview.unusedTickets,
+    availableTickets: preview.availableTickets,
   });
 }

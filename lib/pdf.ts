@@ -65,16 +65,16 @@ async function generateOrderPdfInternal(args: {
   y -= 20;
 
   for (const line of args.lines) {
-    const swim = line.hasSwimmingPass ? " · Swim" : "";
-    const text = `${line.ticketTypeLabel} (${line.ticketTypeCode})${swim} — ${formatZar(line.totalCents)}`;
+    const swim = line.hasSwimmingPass ? " | Swim" : "";
+    const text = `${line.ticketTypeLabel} (${line.ticketTypeCode})${swim} - ${formatZar(line.totalCents)}`;
     page.drawText(text, { x: leftX, y, size: 11, font: fontRegular, maxWidth: 420 });
     y -= 16;
   }
 
   y -= 16;
   const terms =
-    "One QR code for your whole party. Show it at the gate. Staff will admit each guest and assign wristbands; " +
-    "each entry uses one ticket from your list below.";
+    "One QR code for your whole party. Show it at the gate. Staff will review the order, admit the full party, " +
+    "and assign wristbands based on the tickets below.";
 
   page.drawText(terms, {
     x: leftX,

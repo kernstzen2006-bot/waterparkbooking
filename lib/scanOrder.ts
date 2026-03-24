@@ -14,7 +14,7 @@ export type ScanPreviewGroup = {
   remaining: number;
 };
 
-export type ScanPreviewUnusedTicket = {
+export type ScanPreviewAvailableTicket = {
   id: string;
   ticketTypeCode: string;
   ticketTypeName: string;
@@ -65,7 +65,7 @@ export async function loadValidatedOrderFromQrToken(
 export function buildPreviewPayload(order: OrderWithTickets): {
   visitDate: string;
   groups: ScanPreviewGroup[];
-  unusedTickets: ScanPreviewUnusedTicket[];
+  availableTickets: ScanPreviewAvailableTicket[];
 } {
   const visitDate = toYYYYMMDD(order.visitDate);
 
@@ -92,12 +92,18 @@ export function buildPreviewPayload(order: OrderWithTickets): {
     }
   }
 
-  const groups: ScanPreviewGroup[] = [...groupMap.values()].map((g) => ({
-    ...g,
-    remaining: g.total - g.used,
-  }));
+  const groups: ScanPreviewGroup[] = [...groupMap.values()]
+    .map((g) => ({
+      ...g,
+      remaining: g.total - g.used,
+    }))
+    .sort((a, b) => {
+      if (a.ticketTypeCode !== b.ticketTypeCode) return a.ticketTypeCode.localeCompare(b.ticketTypeCode);
+      if (a.hasSwimmingPass === b.hasSwimmingPass) return 0;
+      return a.hasSwimmingPass ? -1 : 1;
+    });
 
-  const unusedTickets: ScanPreviewUnusedTicket[] = order.tickets
+  const availableTickets: ScanPreviewAvailableTicket[] = order.tickets
     .filter((t) => t.status === "UNUSED")
     .map((t) => ({
       id: t.id,
@@ -105,7 +111,12 @@ export function buildPreviewPayload(order: OrderWithTickets): {
       ticketTypeName: t.ticketType.name,
       hasSwimmingPass: t.hasSwimmingPass,
       totalPriceCents: t.totalPriceCents,
-    }));
+    }))
+    .sort((a, b) => {
+      if (a.ticketTypeCode !== b.ticketTypeCode) return a.ticketTypeCode.localeCompare(b.ticketTypeCode);
+      if (a.hasSwimmingPass !== b.hasSwimmingPass) return a.hasSwimmingPass ? -1 : 1;
+      return a.id.localeCompare(b.id);
+    });
 
-  return { visitDate, groups, unusedTickets };
+  return { visitDate, groups, availableTickets };
 }

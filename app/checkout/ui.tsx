@@ -166,7 +166,7 @@ export function CheckoutClient(props: {
           <div className="font-semibold">Terms (basic)</div>
           <ul className="mt-2 list-disc pl-5">
             <li>Tickets are valid only for the selected date.</li>
-            <li>One QR code per order; staff admit each guest and scan once per person at the gate.</li>
+            <li>One QR code per order; staff scan once, review the whole order, and admit the full group at the gate.</li>
             <li>Under-3 tickets are free but must be included for headcount.</li>
           </ul>
         </div>
