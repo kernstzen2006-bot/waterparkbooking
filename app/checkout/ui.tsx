@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { formatZar } from "@/lib/money";
 import { PriceSummary } from "@/components/PriceSummary";
+import { SWIM_ADDON_CENTS } from "@/lib/pricing";
 
 type TypeRow = { code: string; name: string; basePriceCents: number };
 
@@ -40,7 +41,7 @@ export function CheckoutClient(props: {
     for (const a of drafts) {
       const t = typeMap.get(a.ticketTypeCode)!;
       subtotal += t.basePriceCents;
-      if (a.hasSwimmingPass) addOns += 10000; // +R100
+      if (a.hasSwimmingPass) addOns += SWIM_ADDON_CENTS;
     }
     return { subtotal, addOns, total: subtotal + addOns };
   }, [drafts, props.types]);

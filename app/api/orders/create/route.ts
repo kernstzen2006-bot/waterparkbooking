@@ -6,9 +6,9 @@ import { parseDateOnlyFromYYYYMMDD, toYYYYMMDD } from "@/lib/dates";
 import { issueAndSendTicketsForOrder } from "@/lib/orderFulfillment";
 import { sendPendingOrderEmail } from "@/lib/orderNotifications";
 import { getActiveTicketTypes } from "@/lib/ticketTypes";
+import { SWIM_ADDON_CENTS } from "@/lib/pricing";
 import { PaymentMethod, PaymentStatus, OrderStatus, TicketTypeCode } from "@prisma/client";
 
-const SWIM_ADDON_CENTS = 10000;
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {

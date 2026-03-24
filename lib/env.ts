@@ -80,6 +80,11 @@ export const env = {
   SUPABASE_SERVICE_ROLE_KEY: req("SUPABASE_SERVICE_ROLE_KEY"),
   SUPABASE_STORAGE_BUCKET: req("SUPABASE_STORAGE_BUCKET"),
 
-  PAYMENT_PROVIDER: process.env.PAYMENT_PROVIDER || "mock"
+  PAYMENT_PROVIDER: process.env.PAYMENT_PROVIDER || "mock",
+
+  // AI support chat
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY || "",
+  GEMINI_MODEL: process.env.GEMINI_MODEL || "gemini-2.5-flash",
+  SUPPORT_CHAT_CONTEXT: process.env.SUPPORT_CHAT_CONTEXT || "",
 };
 
