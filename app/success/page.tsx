@@ -78,23 +78,28 @@ export default async function SuccessPage({ searchParams }: { searchParams: Reco
 
       {paid ? (
         <div className="rounded border bg-green-50 p-4">
-          <div className="text-lg font-bold text-green-800">Payment confirmed ✅</div>
+          <div className="text-lg font-bold text-green-800">Payment confirmed</div>
           <p className="text-sm text-green-800">
-            Your tickets have been issued. We emailed your PDF.
+            Your tickets have been issued. If email delivery is delayed, you can still download the PDF here.
           </p>
           {order.pdfUrl ? (
             <a className="mt-3 inline-block rounded bg-green-700 px-4 py-2 font-semibold text-white" href={order.pdfUrl}>
               Download PDF
             </a>
           ) : (
-            <p className="mt-2 text-sm text-gray-700">If your PDF is still generating, use “Resend tickets” in Support.</p>
+            <p className="mt-2 text-sm text-gray-700">If your PDF is still generating, use "Resend tickets" in Support.</p>
           )}
         </div>
       ) : pendingEft ? (
         <div className="rounded border bg-yellow-50 p-4">
-          <div className="text-lg font-bold text-yellow-800">Manual EFT pending</div>
+          <div className="text-lg font-bold text-yellow-800">
+            {order.manualEftPopUrl ? "POP uploaded, awaiting approval" : "Manual EFT pending"}
+          </div>
           <p className="text-sm text-yellow-800">
             Use this reference: <span className="font-semibold">{order.id}</span>. Upload your proof of payment below.
+          </p>
+          <p className="mt-2 text-sm text-yellow-800">
+            Tickets are only issued and emailed after an admin approves the EFT.
           </p>
 
           <div className="mt-3 rounded border bg-white p-3 text-sm">

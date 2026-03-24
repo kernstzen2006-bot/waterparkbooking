@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
 import { issueAndSendTicketsForOrder } from "@/lib/orderFulfillment";
+
+export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   const body = Object.fromEntries((await req.formData()).entries());
@@ -20,7 +23,25 @@ export async function POST(req: Request) {
     });
   });
 
-  await issueAndSendTicketsForOrder(orderId);
+  const fulfillment = await issueAndSendTicketsForOrder(orderId);
 
-  return NextResponse.redirect(`${env.APP_BASE_URL}/admin/eft-approvals`);
+  console.info("[eft/approve] approved", {
+    orderId,
+    previousStatus: order.status,
+    emailStatus: fulfillment.emailStatus,
+    emailProvider: fulfillment.emailProvider
+  });
+
+  revalidatePath("/admin/dashboard");
+  revalidatePath("/admin/eft-approvals");
+  revalidatePath(`/admin/orders/${orderId}`);
+
+  const redirectUrl = new URL(`/admin/orders/${orderId}`, env.APP_BASE_URL);
+  redirectUrl.searchParams.set("approved", "1");
+  redirectUrl.searchParams.set("emailStatus", fulfillment.emailStatus);
+  if (fulfillment.emailReason) {
+    redirectUrl.searchParams.set("emailReason", fulfillment.emailReason.slice(0, 180));
+  }
+
+  return NextResponse.redirect(redirectUrl);
 }

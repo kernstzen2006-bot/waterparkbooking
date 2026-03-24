@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { uploadBytes } from "@/lib/storage";
+
+export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   try {
@@ -26,6 +29,20 @@ export async function POST(req: Request) {
         status: "EFT_REVIEW"
       }
     });
+
+    console.info("[eft/upload-pop] stored", {
+      orderId,
+      previousStatus: order.status,
+      nextStatus: "EFT_REVIEW",
+      fileType: file.type || "application/octet-stream",
+      bytes: bytes.length,
+      popUrl: uploaded.publicUrl
+    });
+
+    revalidatePath("/admin/dashboard");
+    revalidatePath("/admin/eft-approvals");
+    revalidatePath(`/admin/orders/${orderId}`);
+    revalidatePath("/success");
 
     return NextResponse.json({ ok: true, popUrl: uploaded.publicUrl });
   } catch (e: any) {

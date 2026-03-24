@@ -53,7 +53,12 @@ export async function POST(req: Request) {
 
   // Issue tickets on paid
   if (isPaidInFull) {
-    await issueAndSendTicketsForOrder(orderId);
+    const fulfillment = await issueAndSendTicketsForOrder(orderId);
+    console.info("[payments/webhook] fulfillment", {
+      orderId,
+      emailStatus: fulfillment.emailStatus,
+      emailProvider: fulfillment.emailProvider
+    });
   }
 
   return NextResponse.json({ ok: true });

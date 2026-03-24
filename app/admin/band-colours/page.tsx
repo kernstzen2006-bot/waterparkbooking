@@ -35,7 +35,7 @@ export default async function BandColoursPage() {
         </div>
 
         <div className="rounded border p-3">
-          <div className="font-semibold">Printable “Today’s wristbands” board</div>
+          <div className="font-semibold">Printable "Today's wristbands" board</div>
           <div className="mt-2 grid gap-2 md:grid-cols-2">
             {bands.map((b) => (
               <div key={b.id} className="flex items-center justify-between rounded border p-3">
@@ -49,13 +49,13 @@ export default async function BandColoursPage() {
               </div>
             ))}
             {bands.length === 0 ? (
-              <div className="text-sm text-gray-600">No colours generated yet. Click “Ensure generated”.</div>
+              <div className="text-sm text-gray-600">No colours generated yet. Click "Ensure generated".</div>
             ) : null}
           </div>
         </div>
 
         <div className="text-xs text-gray-600">
-          Under-3 always “NO WRISTBAND” (never included in daily mapping).
+          Under-3 always "NO WRISTBAND" (never included in daily mapping).
         </div>
         <div className="text-xs text-gray-600">
           Non-swimmers pool: Grey, White, Gold, Silver | Swimmers pool: Green, Pink, Orange, Red, Purple.

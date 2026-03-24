@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { AdminNav } from "@/components/AdminNav";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +10,7 @@ export default async function EftApprovalsPage() {
       id: true,
       customerEmail: true,
       status: true,
+      updatedAt: true,
       manualEftPopUrl: true,
     },
     where: { status: { in: ["PENDING_EFT", "EFT_REVIEW"] } },
@@ -30,6 +32,7 @@ export default async function EftApprovalsPage() {
                 <th className="py-2">Order</th>
                 <th>Email</th>
                 <th>Status</th>
+                <th>Updated</th>
                 <th>POP</th>
                 <th>Approve</th>
               </tr>
@@ -37,9 +40,14 @@ export default async function EftApprovalsPage() {
             <tbody>
               {orders.map((o) => (
                 <tr key={o.id} className="border-t">
-                  <td className="py-2 font-mono text-xs">{o.id}</td>
+                  <td className="py-2 font-mono text-xs">
+                    <Link className="text-blue-700 hover:underline" href={`/admin/orders/${o.id}`}>
+                      {o.id}
+                    </Link>
+                  </td>
                   <td>{o.customerEmail}</td>
                   <td className="font-semibold">{o.status}</td>
+                  <td>{new Date(o.updatedAt).toLocaleString()}</td>
                   <td>
                     {o.manualEftPopUrl ? (
                       <a className="text-blue-700 hover:underline" href={o.manualEftPopUrl} target="_blank">
@@ -60,7 +68,7 @@ export default async function EftApprovalsPage() {
                 </tr>
               ))}
               {orders.length === 0 ? (
-                <tr><td className="py-4 text-gray-600" colSpan={5}>No pending EFT approvals.</td></tr>
+                <tr><td className="py-4 text-gray-600" colSpan={6}>No pending EFT approvals.</td></tr>
               ) : null}
             </tbody>
           </table>

@@ -10,7 +10,7 @@ export default function SupportPage() {
         <p className="font-semibold">Manual fallback at the gate:</p>
         <ul className="list-disc pl-5">
           <li>Bring your Order ID or Ticket ID.</li>
-          <li>Staff can search in Admin → Orders or use the offline lookup procedure.</li>
+          <li>Staff can search in Admin -&gt; Orders or use the offline lookup procedure.</li>
         </ul>
       </div>
     </div>

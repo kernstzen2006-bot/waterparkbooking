@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { issueAndSendTicketsForOrder } from "@/lib/orderFulfillment";
+import { env } from "@/lib/env";
+import { issueTicketsForOrder } from "@/lib/issueTickets";
 
 export const runtime = "nodejs";
 
@@ -18,9 +20,20 @@ export async function POST(req: Request) {
     if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
     if (order.status !== "PAID") return NextResponse.json({ error: "Order not paid" }, { status: 400 });
 
-    const issued = await issueAndSendTicketsForOrder(order.id);
+    const issued = await issueTicketsForOrder(order.id);
 
-    return NextResponse.json({ ok: true, pdfUrl: issued.pdfUrl });
+    console.info("[tickets/issue] rebuilt", {
+      orderId: order.id,
+      pdfUrl: issued.pdfUrl
+    });
+
+    revalidatePath(`/admin/orders/${order.id}`);
+
+    if (contentType.includes("application/json")) {
+      return NextResponse.json({ ok: true, pdfUrl: issued.pdfUrl });
+    }
+
+    return NextResponse.redirect(`${env.APP_BASE_URL}/admin/orders/${order.id}?reissued=1`);
   } catch (e: any) {
     return NextResponse.json({ error: e?.message ?? "Server error" }, { status: 500 });
   }

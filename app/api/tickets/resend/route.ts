@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { sendTicketsEmail } from "@/lib/email";
 import { env } from "@/lib/env";
@@ -44,15 +45,40 @@ export async function POST(req: Request) {
       </div>
     `;
 
-    await sendTicketsEmail({
-      to: order.customerEmail,
-      subject,
-      html,
-      attachmentName: `tickets-${order.id}.pdf`,
-      attachmentBytes: pdfBytes ?? new Uint8Array()
+    let emailStatus: "sent" | "skipped" | "failed" = "sent";
+    let emailReason = "";
+
+    try {
+      const result = await sendTicketsEmail({
+        to: order.customerEmail,
+        subject,
+        html,
+        attachmentName: `tickets-${order.id}.pdf`,
+        attachmentBytes: pdfBytes ?? new Uint8Array()
+      });
+      emailStatus = result.status;
+      emailReason = result.status === "skipped" ? result.reason : "";
+    } catch (error) {
+      emailStatus = "failed";
+      emailReason = error instanceof Error ? error.message : "Unknown email error";
+    }
+
+    console.info("[tickets/resend] attempted", {
+      orderId: order.id,
+      emailStatus,
+      emailReason: emailReason || null
     });
 
-    return NextResponse.redirect(`${env.APP_BASE_URL}/admin/orders/${order.id}`);
+    revalidatePath(`/admin/orders/${order.id}`);
+
+    const redirectUrl = new URL(`/admin/orders/${order.id}`, env.APP_BASE_URL);
+    redirectUrl.searchParams.set("resent", "1");
+    redirectUrl.searchParams.set("emailStatus", emailStatus);
+    if (emailReason) {
+      redirectUrl.searchParams.set("emailReason", emailReason.slice(0, 180));
+    }
+
+    return NextResponse.redirect(redirectUrl);
   } catch (e: any) {
     return NextResponse.json({ error: e?.message ?? "Server error" }, { status: 500 });
   }

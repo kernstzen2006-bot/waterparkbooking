@@ -10,6 +10,10 @@ type SendArgs = {
   attachmentBytes: Uint8Array;
 };
 
+export type SendTicketsEmailResult =
+  | { status: "sent"; provider: "smtp" | "resend" }
+  | { status: "skipped"; provider: string; reason: string };
+
 let resendClient: Resend | null | undefined;
 let smtpTransport: nodemailer.Transporter | null | undefined;
 
@@ -40,7 +44,7 @@ function getSmtpTransport() {
   return smtpTransport;
 }
 
-export async function sendTicketsEmail(args: SendArgs) {
+export async function sendTicketsEmail(args: SendArgs): Promise<SendTicketsEmailResult> {
   const provider = (env.EMAIL_PROVIDER || "").toLowerCase();
   const hasAttachment = !!args.attachmentBytes && args.attachmentBytes.length > 0;
 
@@ -48,7 +52,7 @@ export async function sendTicketsEmail(args: SendArgs) {
     const transport = getSmtpTransport();
     if (!transport) {
       console.warn("[email] SMTP not configured; email not sent.");
-      return;
+      return { status: "skipped", provider: "smtp", reason: "SMTP not configured" };
     }
 
     console.log("[email] SMTP send", {
@@ -79,14 +83,14 @@ export async function sendTicketsEmail(args: SendArgs) {
       response: info.response,
     });
 
-    return;
+    return { status: "sent", provider: "smtp" };
   }
 
   if (provider === "resend") {
     const resend = getResend();
     if (!resend) {
       console.warn("[email] RESEND_API_KEY not set; email not sent.");
-      return;
+      return { status: "skipped", provider: "resend", reason: "RESEND_API_KEY not set" };
     }
 
     console.log("[email] Resend send", {
@@ -112,8 +116,10 @@ export async function sendTicketsEmail(args: SendArgs) {
     });
 
     console.log("[email] Resend accepted");
-    return;
+    return { status: "sent", provider: "resend" };
   }
 
-  console.warn(`[email] EMAIL_PROVIDER not set or unsupported ("${env.EMAIL_PROVIDER}"); email not sent.`);
+  const reason = `EMAIL_PROVIDER not set or unsupported ("${env.EMAIL_PROVIDER}")`;
+  console.warn(`[email] ${reason}; email not sent.`);
+  return { status: "skipped", provider: provider || "unknown", reason };
 }

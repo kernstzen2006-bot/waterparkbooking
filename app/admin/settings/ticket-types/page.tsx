@@ -21,7 +21,7 @@ export default async function TicketTypesSettings() {
         }))}
       />
       <div className="text-xs text-gray-600">
-        Production note: You required ticket products “exactly”. Keep codes stable (ADULT/KID/PENSIONER/UNDER3).
+        Production note: You required ticket products "exactly". Keep codes stable (ADULT/KID/PENSIONER/UNDER3).
       </div>
     </div>
   );

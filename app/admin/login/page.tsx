@@ -26,7 +26,7 @@ export default function AdminLoginPage({ searchParams }: { searchParams: Record<
           return;
         }
       } else if (!res.ok) {
-        setMsg(`Login failed (${res.status}). Empty response — often a database or env error.`);
+        setMsg(`Login failed (${res.status}). Empty response - often a database or env error.`);
         return;
       }
       if (!res.ok) {

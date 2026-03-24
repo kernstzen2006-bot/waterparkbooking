@@ -81,9 +81,21 @@ export async function POST(req: Request) {
       return order;
     });
 
+    console.info("[orders/create] created", {
+      orderId: created.id,
+      paymentMethod,
+      status: created.status,
+      totalCents: total
+    });
+
     // If auto-confirmed, issue immediately
     if (created.status === "PAID") {
-      await issueAndSendTicketsForOrder(created.id);
+      const fulfillment = await issueAndSendTicketsForOrder(created.id);
+      console.info("[orders/create] fulfillment", {
+        orderId: created.id,
+        emailStatus: fulfillment.emailStatus,
+        emailProvider: fulfillment.emailProvider
+      });
     }
 
     return NextResponse.json({

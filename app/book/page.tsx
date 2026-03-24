@@ -9,7 +9,7 @@ export default async function BookPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Book tickets</h1>
-      <p className="text-gray-700">Select your visit date and quantities. You’ll choose swimming pass per attendee at checkout.</p>
+      <p className="text-gray-700">Select your visit date and quantities. You'll choose swimming pass per attendee at checkout.</p>
 
       <div className="rounded border bg-white p-4">
         <form action="/checkout" method="GET" className="space-y-4">
