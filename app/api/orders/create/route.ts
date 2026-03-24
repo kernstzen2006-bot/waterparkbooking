@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { createOrderSchema } from "@/lib/validation";
-import { parseDateOnlyFromYYYYMMDD } from "@/lib/dates";
+import { parseDateOnlyFromYYYYMMDD, toYYYYMMDD } from "@/lib/dates";
 import { issueAndSendTicketsForOrder } from "@/lib/orderFulfillment";
+import { sendPendingOrderEmail } from "@/lib/orderNotifications";
 import { getActiveTicketTypes } from "@/lib/ticketTypes";
 import { PaymentMethod, PaymentStatus, OrderStatus, TicketTypeCode } from "@prisma/client";
 
 const SWIM_ADDON_CENTS = 10000;
+export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   try {
@@ -88,6 +91,10 @@ export async function POST(req: Request) {
       totalCents: total
     });
 
+    revalidatePath("/admin/dashboard");
+    revalidatePath("/admin/eft-approvals");
+    revalidatePath(`/admin/orders/${created.id}`);
+
     // If auto-confirmed, issue immediately
     if (created.status === "PAID") {
       const fulfillment = await issueAndSendTicketsForOrder(created.id);
@@ -95,6 +102,14 @@ export async function POST(req: Request) {
         orderId: created.id,
         emailStatus: fulfillment.emailStatus,
         emailProvider: fulfillment.emailProvider
+      });
+    } else {
+      await sendPendingOrderEmail({
+        orderId: created.id,
+        customerEmail,
+        paymentMethod,
+        visitDate: toYYYYMMDD(vd),
+        totalCents: total
       });
     }
 

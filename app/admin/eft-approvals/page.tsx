@@ -1,79 +1,20 @@
-import { prisma } from "@/lib/prisma";
+import { unstable_noStore as noStore } from "next/cache";
 import { AdminNav } from "@/components/AdminNav";
-import Link from "next/link";
+import { EftApprovalsLive } from "@/components/EftApprovalsLive";
+import { getEftQueueOrders } from "@/lib/adminData";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function EftApprovalsPage() {
-  const orders = await prisma.order.findMany({
-    select: {
-      id: true,
-      customerEmail: true,
-      status: true,
-      updatedAt: true,
-      manualEftPopUrl: true,
-    },
-    where: { status: { in: ["PENDING_EFT", "EFT_REVIEW"] } },
-    orderBy: { updatedAt: "desc" },
-    take: 50
-  });
+  noStore();
+  const orders = await getEftQueueOrders();
 
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">EFT approvals</h1>
       <AdminNav />
-
-      <div className="rounded border bg-white p-4">
-        <div className="font-semibold">Pending POP uploads</div>
-        <div className="mt-3 overflow-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-xs text-gray-600">
-                <th className="py-2">Order</th>
-                <th>Email</th>
-                <th>Status</th>
-                <th>Updated</th>
-                <th>POP</th>
-                <th>Approve</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orders.map((o) => (
-                <tr key={o.id} className="border-t">
-                  <td className="py-2 font-mono text-xs">
-                    <Link className="text-blue-700 hover:underline" href={`/admin/orders/${o.id}`}>
-                      {o.id}
-                    </Link>
-                  </td>
-                  <td>{o.customerEmail}</td>
-                  <td className="font-semibold">{o.status}</td>
-                  <td>{new Date(o.updatedAt).toLocaleString()}</td>
-                  <td>
-                    {o.manualEftPopUrl ? (
-                      <a className="text-blue-700 hover:underline" href={o.manualEftPopUrl} target="_blank">
-                        View POP
-                      </a>
-                    ) : (
-                      <span className="text-gray-500">No upload</span>
-                    )}
-                  </td>
-                  <td>
-                    <form action="/api/eft/approve" method="POST">
-                      <input type="hidden" name="orderId" value={o.id} />
-                      <button className="rounded bg-green-700 px-3 py-1 text-xs font-semibold text-white" disabled={!o.manualEftPopUrl}>
-                        Approve & issue
-                      </button>
-                    </form>
-                  </td>
-                </tr>
-              ))}
-              {orders.length === 0 ? (
-                <tr><td className="py-4 text-gray-600" colSpan={6}>No pending EFT approvals.</td></tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <EftApprovalsLive initialOrders={orders} />
     </div>
   );
 }
