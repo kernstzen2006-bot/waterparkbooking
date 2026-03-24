@@ -4,9 +4,56 @@ function req(name: string): string {
   return v;
 }
 
+function normalizeBaseUrl(raw?: string): string | null {
+  if (!raw) return null;
+
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+
+  try {
+    return new URL(withProtocol).origin;
+  } catch {
+    return null;
+  }
+}
+
+function isLocalBaseUrl(raw: string): boolean {
+  try {
+    const { hostname } = new URL(raw);
+    return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "0.0.0.0";
+  } catch {
+    return false;
+  }
+}
+
+function resolveAppBaseUrl(): string {
+  const explicitCandidates = [
+    normalizeBaseUrl(process.env.APP_BASE_URL),
+    normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL),
+  ].filter((value): value is string => Boolean(value));
+
+  const vercelCandidates = [
+    normalizeBaseUrl(process.env.VERCEL_PROJECT_PRODUCTION_URL),
+    normalizeBaseUrl(process.env.VERCEL_URL),
+  ].filter((value): value is string => Boolean(value));
+
+  const preferredExplicit = explicitCandidates.find((value) => !isLocalBaseUrl(value));
+  if (preferredExplicit) return preferredExplicit;
+
+  const preferredVercel = vercelCandidates[0];
+  if (preferredVercel) return preferredVercel;
+
+  const fallbackExplicit = explicitCandidates[0];
+  if (fallbackExplicit) return fallbackExplicit;
+
+  return "http://localhost:3000";
+}
+
 export const env = {
   DATABASE_URL: req("DATABASE_URL"),
-  APP_BASE_URL: req("APP_BASE_URL"),
+  APP_BASE_URL: resolveAppBaseUrl(),
   APP_NAME: req("APP_NAME"),
   VENUE_NAME: req("VENUE_NAME"),
   SUPPORT_EMAIL: req("SUPPORT_EMAIL"),
