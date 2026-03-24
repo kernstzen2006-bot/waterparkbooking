@@ -1,11 +1,17 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { TicketTypeCode } from "@prisma/client";
+import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { loadValidatedOrderFromQrToken } from "@/lib/scanOrder";
 import { getTodayWristband } from "@/lib/wristbands";
 import { toYYYYMMDD } from "@/lib/dates";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  const auth = await requireAdmin(req);
+  if (!auth.ok) {
+    return NextResponse.json({ ok: false, reason: "Unauthorized" }, { status: 401 });
+  }
+
   const body = await req.json();
   const token = String(body.token || "");
   const scannerId = String(body.scannerId || "unknown");

@@ -10,7 +10,6 @@ export function Nav() {
         <nav className="flex gap-4 text-sm">
           <Link href="/book" className="hover:underline">Book</Link>
           <Link href="/support" className="hover:underline">Support</Link>
-          <Link href="/scan" className="hover:underline">Scan</Link>
           <Link href="/admin/dashboard" className="hover:underline">Admin</Link>
         </nav>
       </div>

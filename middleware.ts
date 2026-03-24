@@ -9,8 +9,10 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Protect admin routes
-  if (pathname.startsWith("/admin")) {
+  const isProtectedPage = pathname.startsWith("/admin") || pathname === "/scan" || pathname.startsWith("/scan/");
+
+  // Protect admin routes and the gate scanner page
+  if (isProtectedPage) {
     const ok = await isAdminRequestAuthed(req);
     if (!ok) {
       const url = req.nextUrl.clone();
@@ -24,5 +26,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*"]
+  matcher: ["/admin/:path*", "/scan/:path*"]
 };

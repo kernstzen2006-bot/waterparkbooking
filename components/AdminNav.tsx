@@ -6,6 +6,7 @@ export function AdminNav() {
       <Link className="hover:underline" href="/admin/dashboard">Dashboard</Link>
       <Link className="hover:underline" href="/admin/eft-approvals">EFT approvals</Link>
       <Link className="hover:underline" href="/admin/band-colours">Band colours</Link>
+      <Link className="hover:underline" href="/scan">Scan</Link>
       <Link className="hover:underline" href="/admin/scan-logs">Scan logs</Link>
       <Link className="hover:underline" href="/admin/settings/ticket-types">Ticket types</Link>
       <a className="ml-auto rounded border px-2 py-1 hover:bg-gray-50" href="/api/admin/logout">

@@ -110,6 +110,7 @@ export function AdminDashboardLive({ initialData }: { initialData: OverviewData 
           <div className="mt-2 flex flex-col gap-2 text-sm">
             <Link className="rounded border px-3 py-2 hover:bg-gray-50" href="/admin/eft-approvals">Review EFT POP</Link>
             <Link className="rounded border px-3 py-2 hover:bg-gray-50" href="/admin/band-colours">Today wristbands</Link>
+            <Link className="rounded border px-3 py-2 hover:bg-gray-50" href="/scan">Open scanner</Link>
             <Link className="rounded border px-3 py-2 hover:bg-gray-50" href="/admin/scan-logs">Scan logs</Link>
           </div>
         </div>
